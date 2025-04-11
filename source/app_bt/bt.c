@@ -22,7 +22,7 @@
 #include "nvram_lib.h"
 #include "app.h"
 #include "app_bt_utils.h"
-
+#include  "app_terminal_trace.h"
 
 /******************************************************************************
  * Defines
@@ -138,9 +138,9 @@ static wiced_result_t app_bt_management(wiced_bt_management_evt_t event,
 
                 /* read extended device info */
                 wiced_bt_dev_read_local_addr_ext(&bt.dev);
-
+#ifdef ENABLE_BT_SPY_LOG
                 WICED_BT_TRACE("Local Addr: %B", dev_info()->local_addr);
-
+#endif
                 app_init();
 #ifdef AUTO_PAIRING
                 bt_enter_pairing();
@@ -156,15 +156,17 @@ static wiced_result_t app_bt_management(wiced_bt_management_evt_t event,
 
         case BTM_USER_CONFIRMATION_REQUEST_EVT:
             WICED_BT_TRACE("BTM_USER_CONFIRMATION_REQUEST_EVT: Numeric_value:"
-                "%d \n",p_event_data->user_confirmation_request.numeric_value);
+                "%d \n", (int)p_event_data->user_confirmation_request.numeric_value);
             wiced_bt_dev_confirm_req_reply( WICED_BT_SUCCESS,
                 p_event_data->user_confirmation_request.bd_addr);
             break;
 
         case BTM_PASSKEY_NOTIFICATION_EVT:
+#ifdef ENABLE_BT_SPY_LOG
             WICED_BT_TRACE("PassKey Notification. BDA %B, Key %d \n",
                            p_event_data->user_passkey_notification.bd_addr,
                            p_event_data->user_passkey_notification.passkey );
+#endif
             wiced_bt_dev_confirm_req_reply(WICED_BT_SUCCESS,
                 p_event_data->user_passkey_notification.bd_addr);
             break;
@@ -192,8 +194,10 @@ static wiced_result_t app_bt_management(wiced_bt_management_evt_t event,
             {
                 wiced_bt_device_link_keys_t *p_link_keys = 
                     &p_event_data->paired_device_link_keys_update;
+#ifdef ENABLE_BT_SPY_LOG
                 WICED_BT_TRACE("BTM_PAIRED_DEVICE_LINK_KEYS_UPDATE_EVT BdAddr:"
                                "%B",p_link_keys->bd_addr);
+#endif
                 host_set_link_key(p_link_keys->bd_addr, p_link_keys,
                                   link_transport());
                 link_set_bonded(TRUE); // Now we are bonded
@@ -211,19 +215,25 @@ static wiced_result_t app_bt_management(wiced_bt_management_evt_t event,
             }
             else
             {
+#ifdef ENABLE_BT_SPY_LOG
                 WICED_BT_TRACE("requsted %B link_key not available",
                     p_event_data->paired_device_link_keys_request.bd_addr);
+#endif
                 result = WICED_BT_ERROR;
             }
             break;
 
         case BTM_ENCRYPTION_STATUS_EVT:
             p_encryption_status = &p_event_data->encryption_status;
+#ifdef ENABLE_BT_SPY_LOG
             WICED_BT_TRACE("Encryption address:%B result:%d (%sencrypted)",
                 p_encryption_status->bd_addr,
                 p_event_data->encryption_status.result,
                 p_event_data->encryption_status.result == WICED_SUCCESS? "": 
                 "not ");
+#else
+            (void)p_encryption_status;
+#endif
             link_set_encrypted(p_event_data->encryption_status.result 
                                == WICED_SUCCESS);
             break;
@@ -318,11 +328,13 @@ static wiced_result_t app_bt_management(wiced_bt_management_evt_t event,
             break;
 
         case BTM_BLE_PHY_UPDATE_EVT:
+#ifdef ENABLE_BT_SPY_LOG
             WICED_BT_TRACE("PHY update: status:%d Tx:%d Rx:%d BDA %B",
                            p_event_data->ble_phy_update_event.status,
                 p_event_data->ble_phy_update_event.tx_phy,
                 p_event_data->ble_phy_update_event.rx_phy,
                 p_event_data->ble_phy_update_event.bd_address);
+#endif
             break;
 
         default:

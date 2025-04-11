@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024, Cypress Semiconductor Corporation (an Infineon company) or
+ *  Copyright 2025, Cypress Semiconductor Corporation (an Infineon company) or
  *  an affiliate of Cypress Semiconductor Corporation.  All rights reserved.
  * 
  *  This software, including source code, documentation and related
@@ -45,7 +45,7 @@
 
 #include "wiced_bt_trace.h"
 #include "app.h"
-
+#include  "app_terminal_trace.h"
 static button_cfg_t button_cfg[BUTTON_MAX] = {
   { CYBSP_USER_BTN, CYBSP_BTN_OFF },
 };

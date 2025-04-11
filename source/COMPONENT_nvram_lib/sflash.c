@@ -1,5 +1,5 @@
 /*
- * Copyright 2024, Cypress Semiconductor Corporation (an Infineon company) or
+ * Copyright 2025, Cypress Semiconductor Corporation (an Infineon company) or
  * an affiliate of Cypress Semiconductor Corporation.  All rights reserved.
  *
  * This software, including source code, documentation and related
@@ -46,7 +46,7 @@
 #include "cycfg_qspi_memslot.h"
 #include "cy_serial_flash_qspi.h"
 #include "mtb_kvstore.h"
-
+#include  "app_terminal_trace.h"
 #if NVRAM_TRACE
 # define NVRAM_LIB_TRACE     WICED_BT_TRACE
 #else

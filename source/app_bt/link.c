@@ -13,7 +13,7 @@
 #include "wiced_bt_gatt.h"
 #include "wiced_bt_l2c.h"
 #include "app.h"
-
+#include  "app_terminal_trace.h"
 #define MAX_CONN            2
 
 /******************************************************************************
@@ -311,7 +311,7 @@ wiced_bt_gatt_status_t link_down(const wiced_bt_gatt_connection_status_t *p_stat
     if (conn == NULL)
     {
         // link down with invalid conn_id should not happen
-        WICED_BT_TRACE("Invalid conn_id for link down event",p_status->conn_id);
+        WICED_BT_TRACE("Invalid conn_id for link down event %d",p_status->conn_id);
         return WICED_BT_GATT_DATABASE_OUT_OF_SYNC;
     }
 
@@ -370,7 +370,15 @@ wiced_bt_gatt_connection_status_t * link_connection_status()
 wiced_bool_t link_set_acl_conn_interval(uint16_t interval)
 {
     wiced_bt_ble_conn_params_t conn_parameters;
-
+    wiced_bt_ble_pref_conn_params_t conn_param_t =
+    {
+        .conn_interval_min = interval,
+        .conn_interval_max = interval,
+        .conn_latency = 0,
+        .conn_supervision_timeout = (interval < 10) ?NON_ISOC_ACL_LINK_SUPERVISION_TIMEOUT :ISOC_ACL_LINK_SUPERVISION_TIMEOUT,
+        .min_ce_length = 0,
+        .max_ce_length = 0,
+    };
     if (link.active)
     {
         wiced_bt_ble_get_connection_parameters(link.active->bd_addr,
@@ -380,10 +388,7 @@ wiced_bool_t link_set_acl_conn_interval(uint16_t interval)
         {
             WICED_BT_TRACE("Set connection interval from %d to %d",
                            conn_parameters.conn_interval, interval);
-            wiced_bt_l2cap_update_ble_conn_params(link.active->bd_addr,
-                           interval, interval, 0,interval < 10 ? 
-                           NON_ISOC_ACL_LINK_SUPERVISION_TIMEOUT : 
-                           ISOC_ACL_LINK_SUPERVISION_TIMEOUT);
+            wiced_bt_l2cap_update_ble_conn_params(link.active->bd_addr,&conn_param_t);
             return TRUE;
         }
     }

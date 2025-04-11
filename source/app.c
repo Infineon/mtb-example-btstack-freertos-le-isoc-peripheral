@@ -20,7 +20,7 @@
 #include "wiced_bt_trace.h"
 #include "wiced_bt_types.h"
 #include "app.h"
-
+#include  "app_terminal_trace.h"
 
 /******************************************************************************
  *     Public Functions
@@ -44,8 +44,9 @@ void app_remove_host_bonding(void)
     while (host_is_paired())
     {
         uint8_t *bonded_bdadr = host_addr();
-
+#ifdef ENABLE_BT_SPY_LOG
         WICED_BT_TRACE( "remove bonded device : %B", bonded_bdadr );
+#endif
         wiced_bt_dev_delete_bonded_device( bonded_bdadr );
 
         host_remove();
@@ -96,10 +97,11 @@ wiced_bt_gatt_status_t app_gatt_read_req_handler( uint16_t conn_id,
  *****************************************************************************/
 void app_link_up(wiced_bt_gatt_connection_status_t * p_status)
 {
+#ifdef ENABLE_BT_SPY_LOG
     WICED_BT_TRACE("%s Link is up, conn_id:%04x peer_addr:%B type:%d",
                    link_transport() == BT_TRANSPORT_LE ? "LE" : "BREDR",
                    p_status->conn_id, p_status->bd_addr, p_status->addr_type);
-
+#endif
     led_on(LED_LINK);
 }
 
@@ -128,9 +130,11 @@ void app_link_down(const wiced_bt_gatt_connection_status_t * p_status)
         p_status = link_connection_status();
         if (p_status)
         {
+#ifdef ENABLE_BT_SPY_LOG
             WICED_BT_TRACE("conn_id:%04x peer_addr:%B type:%d now is active",
                            p_status->conn_id, p_status->bd_addr,
                            p_status->addr_type);
+#endif
         }
     }
 }

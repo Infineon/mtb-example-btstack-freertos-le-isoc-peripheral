@@ -1,5 +1,5 @@
 /*
- * Copyright 2024, Cypress Semiconductor Corporation (an Infineon company) or
+ * Copyright 2025, Cypress Semiconductor Corporation (an Infineon company) or
  * an affiliate of Cypress Semiconductor Corporation.  All rights reserved.
  *
  * This software, including source code, documentation and related
@@ -42,7 +42,7 @@
 #include "wiced_timer.h"
 #include "led_lib.h"
 #include "cyhal_system.h"
-
+#include  "app_terminal_trace.h"
 /*******************************************************************************
 * Defines
 *******************************************************************************/

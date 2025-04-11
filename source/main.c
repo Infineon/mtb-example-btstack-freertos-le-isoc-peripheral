@@ -18,6 +18,7 @@
 #include "cybt_platform_trace.h"
 #include "cybsp_bt_config.h"
 #include "cyhal.h"
+#include "app_terminal_trace.h"
 
 /******************************************************************************/
 /* extern                                                                     */

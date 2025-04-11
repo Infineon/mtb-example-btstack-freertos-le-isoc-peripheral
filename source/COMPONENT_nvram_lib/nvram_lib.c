@@ -1,5 +1,5 @@
 /*
- * Copyright 2024, Cypress Semiconductor Corporation (an Infineon company) or
+ * Copyright 2025, Cypress Semiconductor Corporation (an Infineon company) or
  * an affiliate of Cypress Semiconductor Corporation.  All rights reserved.
  *
  * This software, including source code, documentation and related
@@ -42,7 +42,7 @@
 #include "wiced_bt_types.h"
 #include "wiced_bt_trace.h"
 #include "mtb_kvstore.h"
-
+#include  "app_terminal_trace.h"
 #if NVRAM_TRACE
 # define NVRAM_LIB_TRACE     WICED_BT_TRACE
 #else

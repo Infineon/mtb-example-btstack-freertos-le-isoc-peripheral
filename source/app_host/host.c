@@ -14,7 +14,7 @@
 #include "wiced_timer.h"
 #include "nvram_lib.h"
 #include "app.h"
-
+#include  "app_terminal_trace.h"
 #if HOST_TRACE_EN
 # define HOST_TRACE        WICED_BT_TRACE
 # if HOST_TRACE>1
@@ -294,7 +294,9 @@ static wiced_bool_t host_activate(const wiced_bt_device_address_t bdAddr)
 
     if (index != HOST_INFO_INDEX_TOP)
     {
+#ifdef ENABLE_BT_SPY_LOG
         HOST_TRACE("new host %B", bdAddr);
+#endif
 #if HOST_LIST_MAX <= 1
         host.count=1;
 #else
@@ -349,12 +351,16 @@ wiced_bool_t host_get_link_key(const wiced_bt_device_address_t bdAddr,
 
     if (index < HOST_LIST_MAX && (link_key != NULL))
     {
+#ifdef ENABLE_BT_SPY_LOG
         HOST_TRACE("Found link key for %B", bdAddr);
+#endif
         memcpy(link_key, &host.list[index].link_keys,
                sizeof(wiced_bt_device_link_keys_t));
         return TRUE;
     }
+#ifdef ENABLE_BT_SPY_LOG
     HOST_TRACE("No link key found for %B", bdAddr);
+#endif
     return FALSE;
 }
 
@@ -373,8 +379,9 @@ void host_set_link_key(const wiced_bt_device_address_t bdAddr,
                        uint8_t transport)
 {
     host_info_t * ptr = &host.list[HOST_INFO_INDEX_TOP];
-
+#ifdef ENABLE_BT_SPY_LOG
     HOST_TRACE("%s link key for %B", link_keys ? "Update":"Clear", bdAddr);
+#endif
    // bdAddr host will be placed to the top (active host) of the host list
     host_activate(bdAddr);
 
@@ -429,9 +436,11 @@ void host_init()
             {
                 break;
             }
+#ifdef ENABLE_BT_SPY_LOG
             HOST_TRACE("%d. %B (%s host)",index, host.list[index].bdAddr,
                        host.list[index].transport == BT_TRANSPORT_LE ? "LE" :
                        "BR/EDR");
+#endif
             if (host.list[index].transport == BT_TRANSPORT_LE 
                 && host.list[index].bt.le.addrType)
             {

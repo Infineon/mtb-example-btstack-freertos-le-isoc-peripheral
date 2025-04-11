@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2024, Cypress Semiconductor Corporation (an Infineon company) or
+ * Copyright 2016-2025, Cypress Semiconductor Corporation (an Infineon company) or
  * an affiliate of Cypress Semiconductor Corporation.  All rights reserved.
  *
  * This software, including source code, documentation and related
@@ -43,6 +43,7 @@
 #include "app.h"
 #include "cycfg_gap.h"
 #include "gatt_utils_lib.h"
+#include  "app_terminal_trace.h"
 #if GATT_TRACE
 # define APP_GATT_TRACE        WICED_BT_TRACE
 # define APP_GATT_TRACE_ARRAY(ptr, len)        WICED_BT_TRACE("%A", ptr, len)
@@ -539,7 +540,7 @@ wiced_bt_gatt_status_t gatt_read_req_default_handler(uint16_t conn_id,
     }
     else
     {
-        APP_GATT_TRACE("read failed, reason $d", result );
+        APP_GATT_TRACE("read failed, reason %d", result );
         wiced_bt_gatt_server_send_error_rsp(conn_id, opcode, handle, result);
     }
     return result;
