@@ -115,10 +115,10 @@ endif
 # ... then code in directories named COMPONENT_foo and COMPONENT_bar will be
 # added to the build
 #
-COMPONENTS=FREERTOS WICED_BLE BTFW-ISOC-TX10 iso_data_handler_module_lib gatt_utils_lib nvram_lib
+COMPONENTS=FREERTOS WICED_BLE BTFW-TX10 iso_data_handler_module_lib gatt_utils_lib nvram_lib
 
 # Like COMPONENTS, but disable optional code that was enabled by default.
-DISABLE_COMPONENTS=BTFW-TX10
+DISABLE_COMPONENTS=
 
 # By default the build system automatically looks in the Makefile's directory
 # tree for source code and builds it. The SOURCES variable can be used to
