@@ -467,7 +467,7 @@ static void isoc_management_cback(wiced_ble_isoc_event_t event,
         {
             result = (wiced_result_t) wiced_ble_isoc_remove_data_path(
                 p_event_data->cis_disconnect.cis.cis_conn_handle,
-                WICED_BLE_ISOC_DPD_INPUT_BIT);
+                WICED_BLE_ISOC_DPD_INPUT_BIT, NULL);
             APP_ISOC_TRACE("[%s] remove DP, result: %d", __FUNCTION__, result);
         }
         break;
