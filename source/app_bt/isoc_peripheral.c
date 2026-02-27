@@ -27,12 +27,10 @@
 # define APP_ISOC_TRACE_S_ARRAY(str, ptr, len)
 #endif
 
-#define ISOC_MAX_BURST_COUNT                4
-
 // sdu interval in micro-second
 #define ISO_SDU_INTERVAL                    10000
 
-#define ISOC_TIMEOUT_IN_MSECONDS            ISO_SDU_INTERVAL / 1000
+#define ISOC_TIMEOUT_IN_MSECONDS            (ISO_SDU_INTERVAL / 1000)
 //4 minute keep alive timer to ensure app and controller psn
 #define ISOC_KEEP_ALIVE_TIMEOUT_IN_SECONDS  120
                                                    // stays synchronized
@@ -77,31 +75,20 @@ static struct
     uint16_t cis_conn_handle;
     uint16_t max_payload;
     wiced_ble_isoc_cis_established_evt_t  cis_established_data;
-    wiced_timer_t isoc_send_data_timer;
     wiced_timer_t isoc_keep_alive_timer;
 } isoc = {0};
 
-typedef enum
-{
-    SN_IDLE,
-    SN_PENDING,
-    SN_VALID,
-} sequence_number_state_e;
-
-static uint16_t iso_sdu_count = 0;
 static wiced_bool_t pressed_saved;
 static uint16_t sequence = 0;
-static sequence_number_state_e sequence_number_state;
 
-#define CONTROLLER_ISO_DATA_PACKET_BUFS   8
+#define CONTROLLER_ISO_DATA_PACKET_BUFS   6
 static uint8_t number_of_iso_data_packet_bufs = CONTROLLER_ISO_DATA_PACKET_BUFS;
-
 
 static uint32_t isoc_rx_count = 0;
 static uint32_t isoc_tx_count = 0;
 wiced_timer_t iso_stats_timer;
 wiced_ble_isoc_data_path_direction_t dp_dir;
-
+static void isoc_send_data_handler(void);
 
 /*******************************************************************************
  * private functions
@@ -143,12 +130,8 @@ static void read_psn_cb(wiced_bt_dev_vendor_specific_command_complete_params_t
     if(evt->status != 0)
     {
         APP_ISOC_TRACE("[%s] status %d", __FUNCTION__, evt->status);
-        sequence_number_state = SN_IDLE;
         return;
     }
-
-    if( sequence_number_state != SN_PENDING )
-        return;
 
     // If initial transmission, no need to increment
     if( evt->packetSeqNum == 0 )
@@ -156,12 +139,13 @@ static void read_psn_cb(wiced_bt_dev_vendor_specific_command_complete_params_t
     else
         sequence = evt->packetSeqNum + 2;
 
-    sequence_number_state = SN_VALID;
-
     // Send NULL payload if the idle timer is running
     if( wiced_is_timer_in_use(&isoc.isoc_keep_alive_timer) )
     {
         isoc_send_null_payload();
+    }else 
+    {
+       isoc_send_data_handler();
     }
 }
 
@@ -234,9 +218,6 @@ static void isoc_send_null_payload(void)
     wiced_bool_t result;
     uint8_t* p_buf = NULL;
 
-    if(sequence_number_state != SN_VALID)
-        return;
-
     // Allocate buffer for ISOC header
     if((p_buf = iso_dhm_get_data_buffer()) != NULL)
     {
@@ -248,8 +229,6 @@ static void isoc_send_null_payload(void)
                        __FUNCTION__, isoc.cis_established_data.cis.cis_conn_handle,
                        result);
 
-        // Set PSN state back to idle
-        sequence_number_state = SN_IDLE;
     }
 }
 CY_SECTION_RAMFUNC_END
@@ -261,16 +240,13 @@ CY_SECTION_RAMFUNC_END
  *  Updates the send buffer and submits data to the controller
  ******************************************************************************/
 CY_SECTION_RAMFUNC_BEGIN
-static void isoc_send_data_handler( WICED_TIMER_PARAM_TYPE param )
+static void isoc_send_data_handler()
 {
     wiced_bool_t result;
     uint32_t data_length;
     uint8_t* p_buf = NULL;
     uint8_t* p = NULL;
     wiced_bool_t pressed = pressed_saved;
-
-    if(sequence_number_state != SN_VALID)
-        return;
 
     // Submit data to the controller only if it has bufs available
     if(number_of_iso_data_packet_bufs)
@@ -307,7 +283,7 @@ static void isoc_send_data_handler( WICED_TIMER_PARAM_TYPE param )
             APP_ISOC_TRACE("[%s] handle:0x%x SN:%d data_length:%d sdu_count:%d"
                            " result:%d", __FUNCTION__,
                            isoc.cis_established_data.cis.cis_conn_handle,
-                           sequence, (int)data_length, iso_sdu_count, result);
+                           sequence, (int)data_length, (int)isoc_tx_count, result);
 
             // Set P_TX gpio link low to indicate return from lower layer
             set_gpio_low(P_TX);
@@ -315,21 +291,6 @@ static void isoc_send_data_handler( WICED_TIMER_PARAM_TYPE param )
      }
 
     sequence++;
-
-    iso_sdu_count--;
-
-    if(iso_sdu_count == 0)
-    {
-        wiced_stop_timer(&isoc.isoc_send_data_timer);
-
-        sequence_number_state = SN_IDLE;
-
-        // Start keep alive timer
-        wiced_start_timer(&isoc.isoc_keep_alive_timer,
-                          ISOC_KEEP_ALIVE_TIMEOUT_IN_SECONDS);
-
-        APP_ISOC_TRACE("Started keep alive timer");
-    }
 }
 CY_SECTION_RAMFUNC_END
 
@@ -341,7 +302,6 @@ CY_SECTION_RAMFUNC_END
  ******************************************************************************/
 static void isoc_stop(void)
 {
-    wiced_stop_timer(&isoc.isoc_send_data_timer);
     APP_ISOC_TRACE("[%s] enabled HCI trace", __FUNCTION__);
     wiced_bt_dev_update_debug_trace_mode(TRUE);
     wiced_bt_dev_update_hci_trace_mode(TRUE);
@@ -572,8 +532,7 @@ CY_SECTION_RAMFUNC_END
 CY_SECTION_RAMFUNC_BEGIN
 static void isoc_get_psn_start(WICED_TIMER_PARAM_TYPE param)
 {
-    if(sequence_number_state == SN_IDLE &&
-       isoc.cis_established_data.cis.cis_conn_handle)
+    if(isoc.cis_established_data.cis.cis_conn_handle)
     {
         APP_ISOC_TRACE("[%s] sending HCI_BLE_ISOC_READ_TX_SYNC for handle %02x",
                        __FUNCTION__, isoc.cis_established_data.cis.cis_conn_handle);
@@ -583,7 +542,6 @@ static void isoc_get_psn_start(WICED_TIMER_PARAM_TYPE param)
 #else
             start_read_psn_using_vsc(isoc.cis_established_data.cis.cis_conn_handle);
 #endif
-        sequence_number_state = SN_PENDING;
     }
 }
 CY_SECTION_RAMFUNC_END
@@ -605,6 +563,15 @@ static void isoc_send_data_num_complete_packets_evt(uint16_t cis_handle,
     number_of_iso_data_packet_bufs += num_sent;
     wiced_start_timer(&isoc.isoc_keep_alive_timer,
                       ISOC_KEEP_ALIVE_TIMEOUT_IN_SECONDS);
+
+    if(number_of_iso_data_packet_bufs == CONTROLLER_ISO_DATA_PACKET_BUFS)
+    {
+        // Start keep alive timer
+        wiced_start_timer(&isoc.isoc_keep_alive_timer,
+                          ISOC_KEEP_ALIVE_TIMEOUT_IN_SECONDS);
+
+        APP_ISOC_TRACE("Started keep alive timer");
+    }
 }
 CY_SECTION_RAMFUNC_END
 
@@ -689,17 +656,13 @@ void isoc_start(void)
  * Function Name: isoc_send_data
  ******************************************************************************
  * Summary:
- *  Called when configured for burst tx mode when button is pressed.
- *  Number of packets sent defined by ISOC_MAX_BURST_COUNT.
+ *  prepare to send one packet.
  *****************************************************************************/
 CY_SECTION_RAMFUNC_BEGIN
 void isoc_send_data(wiced_bool_t c)
 {
     // save button state
     pressed_saved = c;
-
-    // start to burst out data
-    iso_sdu_count += ISOC_MAX_BURST_COUNT;
 
     // stop keep alive timer if it is running
     if (wiced_is_timer_in_use(&isoc.isoc_keep_alive_timer))
@@ -709,13 +672,6 @@ void isoc_send_data(wiced_bool_t c)
 
     isoc_get_psn_start(0);
 
-    // start to burst out data
-    if (!wiced_is_timer_in_use(&isoc.isoc_send_data_timer))
-    {
-        /* APP_ISOC_TRACE("[%s] start %dms timer", __FUNCTION__,
-           ISOC_TIMEOUT_IN_MSECONDS); */
-        wiced_start_timer(&isoc.isoc_send_data_timer, ISOC_TIMEOUT_IN_MSECONDS);
-    }
 }
 CY_SECTION_RAMFUNC_END
 
@@ -754,12 +710,6 @@ void isoc_init(void)
     phy_preferences.tx_phys = WICED_BLE_ISOC_LE_2M_PHY;
     status = wiced_bt_ble_set_default_phy(&phy_preferences);
     APP_ISOC_TRACE("[%s] Set default phy status %d", __FUNCTION__, status);
-
-    sequence_number_state = SN_IDLE;
-
-    // Init send data timer
-    wiced_init_timer(&isoc.isoc_send_data_timer, isoc_send_data_handler, 0,
-                     WICED_MILLI_SECONDS_PERIODIC_TIMER);
 
     // Init keep alive timer
     wiced_init_timer(&isoc.isoc_keep_alive_timer, isoc_get_psn_start, 0,
